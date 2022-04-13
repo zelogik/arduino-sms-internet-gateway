@@ -1,5 +1,7 @@
 // TODO: remove ALL delay(), change by class/timer etc...
 // need to implement a sort-of fifo
+// add http to eeprom save setting 
+// dhcp tick/static ip/ntp server/allowed received phone number/password_change
 
 #include <Dhcp.h>
 #include <Dns.h>
@@ -12,8 +14,8 @@
 //#include <SimpleTimer.h>
 #include <SoftwareSerial.h>
 
-int pinGprsRx = 7;
-int pinGrpsTx = 8;
+//int pinGprsRx = 7;
+//int pinGrpsTx = 8;
 int pinGprsPower = 9;
 SoftwareSerial gprs(7, 8);
 
@@ -28,10 +30,13 @@ char incomingNumber[20];
 char incomingMessage[INCOMING_BUFFER_SIZE];
 char incomingTimestamp[20];
 
-uint8_t mac[] = { 
-  0x90, 0xA2, 0xDA, 0x0D, 0x86, 0x4C };
-uint8_t ip[] = { 
-  192, 168, 1, 80 };
+const byte mac[] = { 0x90, 0xA2, 0xDA, 0x0D, 0x86, 0x4C };
+const byte ip[] = { 192, 168, 1, 80 };
+//byte gateway[] = { 192, 168, 1, 1 }; // internet access via router
+const byte subnet[] = { 255, 255, 255, 0 };
+const byte null_ip[] = { 0, 0, 0, 0 };
+
+
 EthernetServer server(80);
 EthernetClient client ;
 
@@ -43,15 +48,15 @@ EthernetClient client ;
 
 void setup()
 {
-  Serial.begin(19200);             // the Serial port of Arduino baud rate.
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
-  }
-  Serial.println("setup");
+  Serial.begin(9600);             // the Serial port of Arduino baud rate.
+//  while (!Serial) {
+//    ; // wait for serial port to connect. Needed for Leonardo only
+//  }
+//  Serial.println("setup");
 
   gprs_setup();
   ether_setup();
-  delay(1000);
+//  delay(1000);
 
 //  checkForNewSmsTimer.setInterval(10, checkForNewSms);
 }
@@ -71,9 +76,9 @@ void handleHttpRequests() {
   if (client.connected() && client.available()) {
     // assume 1st line is http method
     nextHttpLine(line);
-    char * method = strtok(line, " \r\n");
+    char *method = strtok(line, " \r\n");
     if (strcmp(method, "POST") == 0) {
-      char * uri = strtok(NULL, " \r\n");
+      char *uri = strtok(NULL, " \r\n");
       if (strcmp(uri, "/sendsms") == 0) {
         // send out sms message
         while (client.connected() && client.available()) {
@@ -81,12 +86,12 @@ void handleHttpRequests() {
           // check for a line "number=+123456789&message=hallo"
           if (strstr(line, "number") != NULL && strstr(line, "message") != NULL) {
             // most likely you want some form of URL decoding as in http://rosettacode.org/wiki/URL_decoding#C
-            char * param1 = strtok(line, "&\r\n\0");
-            char * param2 = strtok(NULL, "&\r\n\0");
+            char *param1 = strtok(line, "&\r\n\0");
+            char *param2 = strtok(NULL, "&\r\n\0");
             strtok(param1, "=");
-            char * number = strtok(NULL, "=\r\n\0");
+            char *number = strtok(NULL, "=\r\n\0");
             strtok(param2, "=");
-            char * message = strtok(NULL, "=\r\n\0");
+            char *message = strtok(NULL, "=\r\n\0");
             gprs_sendTextMessage(number, message);
             smsSent = true;
           }          
@@ -229,8 +234,8 @@ void gprs_setup() {
   delay(500);
   gprs.begin(19200); // the default GPRS baud rate   
   delay(500);
-  //gprs_setTime();
-  delay(500);
+//  gprs_setTime();
+//  delay(500);
   gprs.println("ATE0"); // SMS in text mode
   delay(100);
   gprs.println("AT+CMGF=1"); // SMS in text mode
@@ -296,9 +301,9 @@ boolean checkIncomingTextMessage() {
 void ether_setup() {
   if (Ethernet.begin(mac) == 0)  // Start in DHCP Mode
   {
-    Serial.println("Failed to configure Ethernet using DHCP, using Static Mode");
+    Serial.println(F("Failed to configure Ethernet using DHCP, using Static Mode"));
     // If DHCP Mode failed, start in Static Mode
-    Ethernet.begin(mac, ip);
+    Ethernet.begin(mac, ip, null_ip, null_ip, subnet);
   }
   
   Serial.print("current IP address: ");
@@ -306,7 +311,7 @@ void ether_setup() {
   for (byte thisByte = 0; thisByte < 4; thisByte++)
   {
     Serial.print(Ethernet.localIP()[thisByte], DEC);
-    Serial.print("."); 
+    Serial.print(F(".")); 
   }
   Serial.println();
   
