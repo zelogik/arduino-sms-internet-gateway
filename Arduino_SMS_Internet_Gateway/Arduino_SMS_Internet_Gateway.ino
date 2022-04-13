@@ -71,14 +71,16 @@ void loop() {
 void handleHttpRequests() {
   bool smsSent = false;
   char line[INCOMING_BUFFER_SIZE];
+  char tBuf[65];
 
   client = server.available();
   if (client.connected() && client.available()) {
     // assume 1st line is http method
     nextHttpLine(line);
     char *method = strtok(line, " \r\n");
+    char *uri = strtok(NULL, " \r\n");
     if (strcmp(method, "POST") == 0) {
-      char *uri = strtok(NULL, " \r\n");
+//      char *uri = strtok(NULL, " \r\n");
       if (strcmp(uri, "/sendsms") == 0) {
         // send out sms message
         while (client.connected() && client.available()) {
@@ -97,7 +99,32 @@ void handleHttpRequests() {
           }          
         }
       }
+      else if (strcmp(uri, "/sendconf") == 0) {
+          //ask config
+      }
     }
+    else if(strcmp(method,"GET") == 0) {
+      if (strcmp(uri, "/conf") == 0) {
+          strcpy_P(tBuf,PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("<html><head><script type=\"text/javascript\">"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("function show_alert() {alert(\"This is an alert\");}"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("</script></head>"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("<body><H1>TEST</H1><form method=GET onSubmit=\"show_alert()\">"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("T: <input type=text name=t><br>"));
+          client.write(tBuf);
+          strcpy_P(tBuf,PSTR("R: <input type=text name=r><br><input type=submit></form></body></html>"));
+          client.write(tBuf);
+      }
+      else {
+        // show homepage.
+      }
+    }
+    
     if(smsSent) {
       client.println("HTTP/1.1 200 OK");
       client.println("Content-Type: text/html");
@@ -295,6 +322,7 @@ boolean checkIncomingTextMessage() {
   return true;
 }
 
+
 // *******************************************************
 // ethernet shield specific code
 
@@ -316,4 +344,12 @@ void ether_setup() {
   Serial.println();
   
   server.begin();
+}
+
+
+// *******************************************************
+int freeRam() {
+  extern int __heap_start,*__brkval;
+  int v;
+  return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int) __brkval);  
 }
