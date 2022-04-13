@@ -1,3 +1,6 @@
+// TODO: remove ALL delay(), change by class/timer etc...
+// need to implement a sort-of fifo
+
 #include <Dhcp.h>
 #include <Dns.h>
 #include <Ethernet.h>
@@ -5,8 +8,8 @@
 #include <SPI.h>
 #include <EthernetServer.h>
 #include <EthernetUdp.h>
-#include <util.h>
-#include <SimpleTimer.h>
+//#include <util.h>
+//#include <SimpleTimer.h>
 #include <SoftwareSerial.h>
 
 int pinGprsRx = 7;
@@ -14,29 +17,29 @@ int pinGrpsTx = 8;
 int pinGprsPower = 9;
 SoftwareSerial gprs(7, 8);
 
-SimpleTimer checkForNewSmsTimer;
+//SimpleTimer checkForNewSmsTimer;
 
 // needs to match value of _SS_MAX_RX_BUFF in SoftwareSerial.h 
 // default 64 is not enough, so increase it!
 // (found in somewhere like /Applications/Arduino.app/Contents/Resources/Java/libraries/SoftwareSerial)
-#define INCOMING_BUFFER_SIZE 128
+#define INCOMING_BUFFER_SIZE 160 //old maximum SMS caracteres limit
 
 char incomingNumber[20];
 char incomingMessage[INCOMING_BUFFER_SIZE];
 char incomingTimestamp[20];
 
-byte mac[] = { 
+uint8_t mac[] = { 
   0x90, 0xA2, 0xDA, 0x0D, 0x86, 0x4C };
-byte ip[] = { 
-  192, 168, 1, 177 };
+uint8_t ip[] = { 
+  192, 168, 1, 80 };
 EthernetServer server(80);
 EthernetClient client ;
 
 // Google docs stuff
-char formkey[] = "<<INSERT YOUR GOOGLE FORM KEY HERE>>"; //Replace with your Key, found in Google Doc URL
-byte googleDocsServer[] = { 74,125,153,139 }; // spreadsheets.google.com
-EthernetClient googleDocsClient;
-char buffer [33];
+//char formkey[] = "<<INSERT YOUR GOOGLE FORM KEY HERE>>"; //Replace with your Key, found in Google Doc URL
+//byte googleDocsServer[] = { 74,125,153,139 }; // spreadsheets.google.com
+//EthernetClient googleDocsClient;
+//char buffer [33];
 
 void setup()
 {
@@ -50,7 +53,7 @@ void setup()
   ether_setup();
   delay(1000);
 
-  checkForNewSmsTimer.setInterval(10, checkForNewSms);
+//  checkForNewSmsTimer.setInterval(10, checkForNewSms);
 }
 
 void loop() {
@@ -61,7 +64,7 @@ void loop() {
 // Process incoming HTTP requests
 
 void handleHttpRequests() {
-  boolean smsSent = false;
+  bool smsSent = false;
   char line[INCOMING_BUFFER_SIZE];
 
   client = server.available();
@@ -110,7 +113,7 @@ void handleHttpRequests() {
 }
 
 void nextHttpLine(char* line) {
-  int i = 0;  
+  uint8_t i = 0; //maybe too short?
   while (client.connected()) {
     if (client.available())  {
       line[i] = client.read();
@@ -135,41 +138,41 @@ void nextHttpLine(char* line) {
 
 // *******************************************************
 // Process incoming text messages
-
-void checkForNewSms() {
-  char incomingStoragePosition = gprs_nextAvailableTextIndex();
-  gprs_readTextMessage(incomingStoragePosition);
-  Serial.println(incomingMessage);
-  // check incoming message
-  boolean b = checkIncomingTextMessage();
-  if (b) Serial.println("parsing of incoming message succesful");
-  // forward incoming message
-  // gprs delete old message
-  //gprs_deleteTextMessage(incomingStoragePosition);
-}
-
-void gf_submit(char *entry,char *val){
-
-  char *submit = "&submit=Submit";
-
-  if (googleDocsClient.connect(googleDocsServer, 80)) {
-    googleDocsClient.print("POST /formResponse?formkey=");
-    googleDocsClient.print(formkey);
-    googleDocsClient.println("&ifq HTTP/1.1");
-    googleDocsClient.println("Host: spreadsheets.google.com");
-    googleDocsClient.println("Content-Type: application/x-www-form-urlencoded");
-    googleDocsClient.print("Content-Length: ");    
-    googleDocsClient.println(strlen(entry)+1+strlen(val)+strlen(submit),DEC);
-    googleDocsClient.println();
-    googleDocsClient.print(entry);
-    googleDocsClient.print("=");
-    googleDocsClient.print(val);
-    googleDocsClient.print(submit);
-    googleDocsClient.println();
-  }   
-  delay(1000);
-  googleDocsClient.stop();
-}
+//
+//void checkForNewSms() {
+//  char incomingStoragePosition = gprs_nextAvailableTextIndex();
+//  gprs_readTextMessage(incomingStoragePosition);
+//  Serial.println(incomingMessage);
+//  // check incoming message
+//  boolean b = checkIncomingTextMessage();
+//  if (b) Serial.println("parsing of incoming message succesful");
+//  // forward incoming message
+//  // gprs delete old message
+//  //gprs_deleteTextMessage(incomingStoragePosition);
+//}
+//
+//void gf_submit(char *entry,char *val){
+//
+//  char *submit = "&submit=Submit";
+//
+//  if (googleDocsClient.connect(googleDocsServer, 80)) {
+//    googleDocsClient.print("POST /formResponse?formkey=");
+//    googleDocsClient.print(formkey);
+//    googleDocsClient.println("&ifq HTTP/1.1");
+//    googleDocsClient.println("Host: spreadsheets.google.com");
+//    googleDocsClient.println("Content-Type: application/x-www-form-urlencoded");
+//    googleDocsClient.print("Content-Length: ");    
+//    googleDocsClient.println(strlen(entry)+1+strlen(val)+strlen(submit),DEC);
+//    googleDocsClient.println();
+//    googleDocsClient.print(entry);
+//    googleDocsClient.print("=");
+//    googleDocsClient.print(val);
+//    googleDocsClient.print(submit);
+//    googleDocsClient.println();
+//  }   
+//  delay(1000);
+//  googleDocsClient.stop();
+//}
 
 // *******************************************************
 // GSM/GPRS shield specific code
@@ -184,7 +187,7 @@ char gprs_nextAvailableTextIndex() {
   gprs.println("AT+CMGL=\"ALL\"");
   delay(500);
   char c = ' ';
-  for (int i = 0; i < 10; i++) {
+  for (uint8_t i = 0; i < 10; i++) {
     c = gprs.read();
     // assume output of CMGL is always '  +CMGL: <one digit number at position 9>'
     // TODO what if number is bigger than 9?
@@ -203,7 +206,7 @@ void gprs_readTextMessage(char storagePosition) {
   gprs.print("AT+CMGR=");
   gprs.println(storagePosition);
   delay(500);
-  int count = 0;
+  uint8_t count = 0; //too short?
   char c = ' ';
   while (gprs.available() > 0 && count < INCOMING_BUFFER_SIZE) {
     c = gprs.read();
@@ -263,7 +266,7 @@ boolean checkIncomingTextMessage() {
 
   // 8 "'s before newline
   int charCounter=0;
-  for (int i = 2; i < strlen(incomingMessage) - 1; i++) {
+  for (uint8_t i = 2; i < strlen(incomingMessage) - 1; i++) {
     if (charCounter < 8 && incomingMessage[i] == '\r' && incomingMessage[i+1] == '\n') return false;
     if (incomingMessage[i] == '"') charCounter++;
   }
@@ -271,7 +274,7 @@ boolean checkIncomingTextMessage() {
 
   // 4 ,'s before newline
   charCounter = 0;
-  for (int i = 2; i < strlen(incomingMessage) - 1; i++) {
+  for (uint8_t i = 2; i < strlen(incomingMessage) - 1; i++) {
     if (charCounter < 4 && incomingMessage[i] == '\r' && incomingMessage[i+1] == '\n') return false;
     if (incomingMessage[i] == ',') charCounter++;
   }
@@ -279,7 +282,7 @@ boolean checkIncomingTextMessage() {
 
   // at least 2 newlines (one right at beginning and one between header and content of sms
   charCounter = 0;
-  for (int i = 0; i < strlen(incomingMessage) - 1; i++) {
+  for (uint8_t i = 0; i < strlen(incomingMessage) - 1; i++) {
     if (incomingMessage[i] == '\r' && incomingMessage[i+1] == '\n') charCounter++;
   }
   if (charCounter < 2) return false;
@@ -291,9 +294,21 @@ boolean checkIncomingTextMessage() {
 // ethernet shield specific code
 
 void ether_setup() {
-  Serial.println("ether_setup");
-  Ethernet.begin(mac, ip);
+  if (Ethernet.begin(mac) == 0)  // Start in DHCP Mode
+  {
+    Serial.println("Failed to configure Ethernet using DHCP, using Static Mode");
+    // If DHCP Mode failed, start in Static Mode
+    Ethernet.begin(mac, ip);
+  }
+  
+  Serial.print("current IP address: ");
+  
+  for (byte thisByte = 0; thisByte < 4; thisByte++)
+  {
+    Serial.print(Ethernet.localIP()[thisByte], DEC);
+    Serial.print("."); 
+  }
+  Serial.println();
+  
   server.begin();
 }
-
-
