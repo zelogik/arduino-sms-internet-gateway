@@ -3,6 +3,9 @@
 // add http to eeprom save setting 
 // dhcp tick/static ip/ntp server/allowed received phone number/password_change
 
+// https://forum.arduino.cc/t/arduino-ethernet-and-web-form/309232/4
+// 
+
 #include <Dhcp.h>
 #include <Dns.h>
 #include <Ethernet.h>
@@ -353,3 +356,37 @@ int freeRam() {
   int v;
   return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int) __brkval);  
 }
+
+/**
+     client.println("HTTP/1.1 200 OK");
+     client.println("Content-Type: text/html");
+     client.println("<html><head></head><body>");
+     client.println();
+     client.print("<form method=get>");
+     client.print("<input type='radio' name=r value='1'> One<br>");
+     client.print("<input type='radio' name=r value='2' checked> Two<br>");
+     client.print("<input type='radio' name=r value='3'> Three<br>");
+      client.print("<input type=submit value=submit></form>");
+     client.print("</body></html>");
+
+          //now output HTML data header
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println("<HTML>");
+          client.println("<HEAD>");
+          client.println("<TITLE>Arduino GET test page</TITLE>");
+          client.println("</HEAD>");
+          client.println("<BODY>");
+          client.println("<H1>HTML form GET example</H1>");
+          client.println("<FORM ACTION='/' method=get >"); //uses IP/port of web page
+          client.println("Pin 5 'on5' or 'off5': <INPUT TYPE=TEXT NAME='LED' VALUE='' SIZE='25' MAXLENGTH='50'>");
+          client.println("<INPUT TYPE=SUBMIT NAME='submit' VALUE='Change Pin 5!'>");
+          client.println("</FORM>");
+          client.println("");
+          client.println("</BODY>");
+          client.println("</HTML>");
+          delay(1);
+          //stopping client
+          client.stop();
+          
+**/
